@@ -83,7 +83,7 @@ public class GameListAdapter implements ListAdapter, OnItemClickListener, OnItem
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		if (convertView == null) {
-			convertView = LayoutInflater.from(mActivity).inflate(R.layout.list_item, null);
+			convertView = LayoutInflater.from(mActivity).inflate(R.layout.list_item, parent, false);
 		}
 
 		MahjonggData data = mList.get(position);

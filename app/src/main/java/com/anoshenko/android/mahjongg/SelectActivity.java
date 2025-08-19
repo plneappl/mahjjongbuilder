@@ -88,10 +88,10 @@ public class SelectActivity extends AppCompatActivity implements PopupMenu.Liste
         g.drawARGB(255, 0, 128, 0);
 
         mFavoritesAdapter = new GameListAdapter(this, mFavorites, bitmap,
-                (ListView) findViewById(R.id.FavoritesList));
+                findViewById(R.id.FavoritesList));
 
         mAllGamesAdapter = new GameListAdapter(this, mAllGames, bitmap,
-                (ListView) findViewById(R.id.AllGamesList));
+                findViewById(R.id.AllGamesList));
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
