@@ -2,13 +2,13 @@
 
 <RelativeLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
 	android:fitsSystemWindows="true">
 
 	<RelativeLayout
 		android:id="@+id/BuilderTitle"
-		android:layout_width="fill_parent"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:padding="2dip">
 
@@ -69,14 +69,14 @@
 
 	<com.anoshenko.android.toolbar.HorizontalToolbar
 		android:id="@+id/BuilderToolbar"
-		android:layout_width="fill_parent"
+		android:layout_width="match_parent"
 		android:layout_height="56dip"
 		android:layout_alignParentBottom="true"
 		/>
 
 	<com.anoshenko.android.mahjongg.GameView
 		android:id="@+id/BuilderArrea"
-		android:layout_width="fill_parent"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_above="@id/BuilderToolbar"
 		android:layout_below="@id/BuilderTitle"

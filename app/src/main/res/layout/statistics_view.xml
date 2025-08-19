@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
 	>
 
 	<LinearLayout
 		android:id="@+id/StatisticsTable"
 		android:orientation="vertical"
-		android:layout_width="fill_parent"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		>
 
 		<TextView android:id="@+id/StatisticsGameName"
-			android:layout_width="fill_parent"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:gravity="center"
 			android:textStyle="bold"
@@ -22,8 +22,8 @@
 			android:text=""/>
 
 		<TableLayout
-			android:layout_width="fill_parent"
-			android:layout_height="fill_parent">
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
 
 			<TableRow>
 				<TextView
