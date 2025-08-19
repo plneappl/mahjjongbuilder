@@ -9,7 +9,6 @@ import java.util.Vector;
 import com.anoshenko.android.background.BackgroundActivity;
 import com.anoshenko.android.mahjongg.MahjonggData.LoadExeption;
 
-import android.app.TabActivity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -22,436 +21,443 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
 import android.widget.TabHost;
 
 import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentTabHost;
 
 public class SelectActivity extends AppCompatActivity implements PopupMenu.Listener {
 
-	private final static String FAVORITES_TAG = "FAVORITES";
-	private final static String GAME_LIST_TAG = "GAME_LIST";
+    private final static String FAVORITES_TAG = "FAVORITES";
+    private final static String GAME_LIST_TAG = "GAME_LIST";
 
-	private final static String FAVORITES_KEY = "FAVORITES";
-	private final static char FAVORITE_SEPARATOR = ';';
+    private final static String FAVORITES_KEY = "FAVORITES";
+    private final static char FAVORITE_SEPARATOR = ';';
 
-	private final static String CURRENT_PAGE_KEY = "CURRENT_PAGE";
+    private final static String CURRENT_PAGE_KEY = "CURRENT_PAGE";
 
-	private final Vector<MahjonggData> mFavorites = new Vector<MahjonggData>();
-	private final Vector<MahjonggData> mAllGames = new Vector<MahjonggData>();
+    private final Vector<MahjonggData> mFavorites = new Vector<MahjonggData>();
+    private final Vector<MahjonggData> mAllGames = new Vector<MahjonggData>();
 
-	@SuppressWarnings("unused")
-	private GameListAdapter mFavoritesAdapter, mAllGamesAdapter;
+    @SuppressWarnings("unused")
+    private GameListAdapter mFavoritesAdapter, mAllGamesAdapter;
 
-	private int mPreviewWidth, mPreviewHeight;
-	private FragmentTabHost mTabHost;
-	public final Handler mHandler = new Handler();
+    private int mPreviewWidth, mPreviewHeight;
+    private FragmentTabHost mTabHost;
+    public final Handler mHandler = new Handler();
 
-	//--------------------------------------------------------------------------
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		Utils.setOrientation(this);
+    //--------------------------------------------------------------------------
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        Utils.setOrientation(this);
 
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.game_select);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.game_select);
 
-		mTabHost = findViewById(R.id.tabhost);
-		mTabHost.setup(this, getSupportFragmentManager(), android.R.id.tabcontent);
+        mTabHost = findViewById(R.id.tabhost);
+        mTabHost.setup(this, getSupportFragmentManager(), android.R.id.tabcontent);
 
-		Resources res = getResources();
-		TabHost.TabSpec tab;
-		Bitmap icon;
-		String[] aStart_tab_items = res.getStringArray(R.array.start_tab_items);
-		
-		icon = BitmapFactory.decodeResource(res, R.drawable.icon_favorites);
-		tab = mTabHost.newTabSpec(FAVORITES_TAG);
-		tab.setIndicator(aStart_tab_items[0], new BitmapDrawable(icon));
-		tab.setContent(R.id.FavoritesList);
-		mTabHost.addTab(tab);
+        Resources res = getResources();
+        TabHost.TabSpec tab;
+        Bitmap icon;
+        String[] aStart_tab_items = res.getStringArray(R.array.start_tab_items);
 
-		icon = BitmapFactory.decodeResource(res, R.drawable.icon_all_games);
-		tab = mTabHost.newTabSpec(GAME_LIST_TAG);
-		tab.setIndicator(aStart_tab_items[1], new BitmapDrawable(icon));
-		tab.setContent(R.id.AllGamesList);
-		mTabHost.addTab(tab);
+        icon = BitmapFactory.decodeResource(res, R.drawable.icon_favorites);
+        tab = mTabHost.newTabSpec(FAVORITES_TAG);
+        tab.setIndicator(aStart_tab_items[0], new BitmapDrawable(icon));
+        tab.setContent(R.id.FavoritesList);
+        mTabHost.addTab(tab);
 
-		createGameList();
+        icon = BitmapFactory.decodeResource(res, R.drawable.icon_all_games);
+        tab = mTabHost.newTabSpec(GAME_LIST_TAG);
+        tab.setIndicator(aStart_tab_items[1], new BitmapDrawable(icon));
+        tab.setContent(R.id.AllGamesList);
+        mTabHost.addTab(tab);
 
-		Bitmap bitmap = Bitmap.createBitmap(mPreviewWidth, mPreviewHeight, Bitmap.Config.ARGB_8888);
-		Canvas g = new Canvas(bitmap);
-		g.drawARGB(255, 0, 128, 0);
+        createGameList();
 
-		mFavoritesAdapter = new GameListAdapter(this, mFavorites, bitmap,
-				(ListView)findViewById(R.id.FavoritesList));
+        Bitmap bitmap = Bitmap.createBitmap(mPreviewWidth, mPreviewHeight, Bitmap.Config.ARGB_8888);
+        Canvas g = new Canvas(bitmap);
+        g.drawARGB(255, 0, 128, 0);
 
-		mAllGamesAdapter = new GameListAdapter(this, mAllGames, bitmap,
-				(ListView)findViewById(R.id.AllGamesList));
+        mFavoritesAdapter = new GameListAdapter(this, mFavorites, bitmap,
+                (ListView) findViewById(R.id.FavoritesList));
 
-		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        mAllGamesAdapter = new GameListAdapter(this, mAllGames, bitmap,
+                (ListView) findViewById(R.id.AllGamesList));
 
-		int current = Integer.parseInt(prefs.getString(getString(R.string.pref_start_tab_key), "0"));
-		if (savedInstanceState != null)
-			current = savedInstanceState.getInt(CURRENT_PAGE_KEY, current);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-		mTabHost.setCurrentTab(current);
+        int current = Integer.parseInt(prefs.getString(getString(R.string.pref_start_tab_key), "0"));
+        if (savedInstanceState != null)
+            current = savedInstanceState.getInt(CURRENT_PAGE_KEY, current);
 
-		(new Thread(new GameLoader())).start();
-	}
+        mTabHost.setCurrentTab(current);
 
-	//--------------------------------------------------------------------------
-	protected void onSaveInstanceState(Bundle outState) {
+        (new Thread(new GameLoader())).start();
+    }
+
+    //--------------------------------------------------------------------------
+    protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(CURRENT_PAGE_KEY, mTabHost.getCurrentTab());
-	}
+    }
 
-	//--------------------------------------------------------------------------
-	@Override
-	public void onDestroy() {
-		storeFavoritesList();
-		super.onDestroy();
-	}
+    //--------------------------------------------------------------------------
+    @Override
+    public void onDestroy() {
+        storeFavoritesList();
+        super.onDestroy();
+    }
 
-	//--------------------------------------------------------------------------
-	private class FavoritesListUpdater implements Runnable {
-		@Override
-		public void run() {
-			((ListView)findViewById(R.id.FavoritesList)).invalidateViews();
-		}
-	}
+    //--------------------------------------------------------------------------
+    private class FavoritesListUpdater implements Runnable {
+        @Override
+        public void run() {
+            ((ListView) findViewById(R.id.FavoritesList)).invalidateViews();
+        }
+    }
 
-	//--------------------------------------------------------------------------
-	private class AllGameListUpdater implements Runnable {
-		@Override
-		public void run() {
-			((ListView)findViewById(R.id.AllGamesList)).invalidateViews();
-		}
-	}
+    //--------------------------------------------------------------------------
+    private class AllGameListUpdater implements Runnable {
+        @Override
+        public void run() {
+            ((ListView) findViewById(R.id.AllGamesList)).invalidateViews();
+        }
+    }
 
-	//--------------------------------------------------------------------------
-	private class GameLoader implements Runnable {
-		@Override
-		public void run() {
-			for (MahjonggData mahjongg : mAllGames) {
-				mahjongg.createPreview(mPreviewWidth, mPreviewHeight);
+    //--------------------------------------------------------------------------
+    private class GameLoader implements Runnable {
+        @Override
+        public void run() {
+            for (MahjonggData mahjongg : mAllGames) {
+                mahjongg.createPreview(mPreviewWidth, mPreviewHeight);
 
-				if (mTabHost.getCurrentTab() == 0) {
-					if (mFavorites.contains(mahjongg))
-						mHandler.post(new FavoritesListUpdater());
-				} else {
-					mHandler.post(new AllGameListUpdater());
-				}
-			}
-		}
-	}
+                if (mTabHost.getCurrentTab() == 0) {
+                    if (mFavorites.contains(mahjongg))
+                        mHandler.post(new FavoritesListUpdater());
+                } else {
+                    mHandler.post(new AllGameListUpdater());
+                }
+            }
+        }
+    }
 
-	//--------------------------------------------------------------------------
-	private void createGameList() {
-		DisplayMetrics dm = Utils.getDisplayMetrics(this);
+    //--------------------------------------------------------------------------
+    private void createGameList() {
+        DisplayMetrics dm = Utils.getDisplayMetrics(this);
 
-		int x = Math.min(dm.heightPixels, dm.widthPixels);
-		mPreviewWidth = x * 2 / 5;
-		mPreviewHeight = mPreviewWidth * 3 / 5;
+        int x = Math.min(dm.heightPixels, dm.widthPixels);
+        mPreviewWidth = x * 2 / 5;
+        mPreviewHeight = mPreviewWidth * 3 / 5;
 
-		mFavorites.clear();
-		mAllGames.clear();
+        mFavorites.clear();
+        mAllGames.clear();
 
-		InputStream list_stream = getResources().openRawResource(R.raw.games_list);
-		try {
-			while (list_stream.available() > 0) {
-				try {
-					mAllGames.add(new MahjonggData(this, list_stream));
-				} catch (LoadExeption e) {
-					e.printStackTrace();
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        InputStream list_stream = getResources().openRawResource(R.raw.games_list);
+        try {
+            while (list_stream.available() > 0) {
+                try {
+                    mAllGames.add(new MahjonggData(this, list_stream));
+                } catch (LoadExeption e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-		int[] ids = MahjonggData.getUserGameIds(this);
-		for (int i=0; i<ids.length; i++)
-			try {
-				mAllGames.add(new MahjonggData(this, ids[i]));
-			} catch (LoadExeption e) {
-				e.printStackTrace();
-			}
+        int[] ids = MahjonggData.getUserGameIds(this);
+        for (int i = 0; i < ids.length; i++)
+            try {
+                mAllGames.add(new MahjonggData(this, ids[i]));
+            } catch (LoadExeption e) {
+                e.printStackTrace();
+            }
 
-		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		String favorites = prefs.getString(FAVORITES_KEY, null);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String favorites = prefs.getString(FAVORITES_KEY, null);
 
-		if (favorites == null) {
-			for (MahjonggData data : mAllGames)
-				if (data.getId() == 7) {
-					mFavorites.add(data);
-					break;
-				}
-		} else {
-			Scanner scanner = new Scanner(favorites);
-			scanner.useDelimiter("" + FAVORITE_SEPARATOR);
-			while (scanner.hasNext()) {
-				int id = Integer.parseInt(scanner.next());
-				for (MahjonggData data : mAllGames)
-					if (data.getId() == id) {
-						mFavorites.add(data);
-						break;
-					}
-			}
-		}
-		Collections.sort(mFavorites);
-	}
+        if (favorites == null) {
+            for (MahjonggData data : mAllGames)
+                if (data.getId() == 7) {
+                    mFavorites.add(data);
+                    break;
+                }
+        } else {
+            Scanner scanner = new Scanner(favorites);
+            scanner.useDelimiter("" + FAVORITE_SEPARATOR);
+            while (scanner.hasNext()) {
+                int id = Integer.parseInt(scanner.next());
+                for (MahjonggData data : mAllGames)
+                    if (data.getId() == id) {
+                        mFavorites.add(data);
+                        break;
+                    }
+            }
+        }
+        Collections.sort(mFavorites);
+    }
 
-	//--------------------------------------------------------------------------
-	public void onItemClick(MahjonggData mahjongg) {
-		if (mahjongg.isUnfinished()) {
-			Utils.Note(this, R.string.disable_play);
-		} else {
-			Intent intent = new Intent(this, PlayActivity.class);
-			intent.putExtra(BaseActivity.GAME_ID_KEY, mahjongg.getId());
-			registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-				_onActivityResult(Command.PLAY_ACTIVITY, result);
-			}).launch(intent);
-		}
-	}
+    //--------------------------------------------------------------------------
+    public void onItemClick(MahjonggData mahjongg) {
+        if (mahjongg.isUnfinished()) {
+            Utils.Note(this, R.string.disable_play);
+        } else {
+            Intent intent = new Intent(this, PlayActivity.class);
+            intent.putExtra(BaseActivity.GAME_ID_KEY, mahjongg.getId());
+            playResult.launch(intent);
+        }
+    }
 
-	//--------------------------------------------------------------------------
-	private MahjonggData mLastMahjongg;
+    //--------------------------------------------------------------------------
+    private MahjonggData mLastMahjongg;
 
-	public void onItemLongClick(MahjonggData mahjongg) {
-		mLastMahjongg = mahjongg;
+    public void onItemLongClick(MahjonggData mahjongg) {
+        mLastMahjongg = mahjongg;
 
-		PopupMenu menu = new PopupMenu(this, this);
+        PopupMenu menu = new PopupMenu(this, this);
 
-		menu.setTitle(mahjongg.getName());
+        menu.setTitle(mahjongg.getName());
 
-		menu.addItem(Command.PLAY, R.string.play_item, R.drawable.icon_start,
-				mahjongg.getId() < MahjonggData.USER_GAME_ID || !mahjongg.isUnfinished());
+        menu.addItem(Command.PLAY, R.string.play_item, R.drawable.icon_start,
+                mahjongg.getId() < MahjonggData.USER_GAME_ID || !mahjongg.isUnfinished());
 
-		if (mTabHost.getCurrentTab() == 0)
-			menu.addItem(Command.REMOVE_FAVORITE, R.string.remove_favorite_item, R.drawable.icon_favorite_remove);
-		else
-			menu.addItem(Command.ADD_FAVORITE, R.string.add_to_favorites_item, R.drawable.icon_favorite_add);
+        if (mTabHost.getCurrentTab() == 0)
+            menu.addItem(Command.REMOVE_FAVORITE, R.string.remove_favorite_item, R.drawable.icon_favorite_remove);
+        else
+            menu.addItem(Command.ADD_FAVORITE, R.string.add_to_favorites_item, R.drawable.icon_favorite_add);
 
-		menu.addItem(Command.STATISTICS, R.string.statistics_item, R.drawable.icon_statistics);
+        menu.addItem(Command.STATISTICS, R.string.statistics_item, R.drawable.icon_statistics);
 
-		if (mahjongg.getId() >= MahjonggData.USER_GAME_ID) {
-			menu.addItem(Command.EDIT_USER_GAME, R.string.edit_item, R.drawable.icon_builder);
-			menu.addItem(Command.DELETE_USER_GAME, R.string.delete_item, R.drawable.icon_delete);
-			menu.addItem(Command.USER_GAME_INFO, R.string.info_item, R.drawable.icon_info,
-					mahjongg.getAuthor() != null || mahjongg.getComment() != null);
+        if (mahjongg.getId() >= MahjonggData.USER_GAME_ID) {
+            menu.addItem(Command.EDIT_USER_GAME, R.string.edit_item, R.drawable.icon_builder);
+            menu.addItem(Command.DELETE_USER_GAME, R.string.delete_item, R.drawable.icon_delete);
+            menu.addItem(Command.USER_GAME_INFO, R.string.info_item, R.drawable.icon_info,
+                    mahjongg.getAuthor() != null || mahjongg.getComment() != null);
 
-			//if (!mahjongg.isUnfinished())
-			//	menu.addItem(Command.PUBLISH_USER_GAME, R.string.publish_item, R.drawable.icon_publish);
-		}
+            //if (!mahjongg.isUnfinished())
+            //	menu.addItem(Command.PUBLISH_USER_GAME, R.string.publish_item, R.drawable.icon_publish);
+        }
 
-		menu.show();
-	}
+        menu.show();
+    }
 
-	//--------------------------------------------------------------------------
-	@Override
-	public void onPopupMenuSelect(int command) {
-		if (mLastMahjongg != null) {
-			switch (command) {
-			case Command.PLAY:
-				onItemClick(mLastMahjongg);
-				break;
+    //--------------------------------------------------------------------------
+    @Override
+    public void onPopupMenuSelect(int command) {
+        if (mLastMahjongg != null) {
+            switch (command) {
+                case Command.PLAY:
+                    onItemClick(mLastMahjongg);
+                    break;
 
-			case Command.ADD_FAVORITE:
-				addToFavorites(mLastMahjongg);
-				break;
+                case Command.ADD_FAVORITE:
+                    addToFavorites(mLastMahjongg);
+                    break;
 
-			case Command.REMOVE_FAVORITE:
-				removeFromFavorites(mLastMahjongg);
-				break;
+                case Command.REMOVE_FAVORITE:
+                    removeFromFavorites(mLastMahjongg);
+                    break;
 
-			case Command.STATISTICS:
-				mLastMahjongg.loadStatistics();
-				StatisticsDialog.show(this, mLastMahjongg);
-				break;
+                case Command.STATISTICS:
+                    mLastMahjongg.loadStatistics();
+                    StatisticsDialog.show(this, mLastMahjongg);
+                    break;
 
-			case Command.EDIT_USER_GAME:
-				startBuilder(mLastMahjongg.getId());
-				break;
+                case Command.EDIT_USER_GAME:
+                    startBuilder(mLastMahjongg.getId());
+                    break;
 
-			case Command.DELETE_USER_GAME:
-				Utils.Question(this,
-						getString(R.string.delete_game, mLastMahjongg.getName() == null ?
-								getString(R.string.nameless) : mLastMahjongg.getName()),
-						new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						if (MahjonggData.deleteGame(SelectActivity.this, mLastMahjongg.getId())) {
-							mAllGames.remove(mLastMahjongg);
-							((ListView)findViewById(R.id.AllGamesList)).invalidateViews();
-							if (mFavorites.remove(mLastMahjongg))
-								((ListView)findViewById(R.id.FavoritesList)).invalidateViews();
-						}
-					}});
-				break;
+                case Command.DELETE_USER_GAME:
+                    Utils.Question(this,
+                            getString(R.string.delete_game, mLastMahjongg.getName() == null ?
+                                    getString(R.string.nameless) : mLastMahjongg.getName()),
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    if (MahjonggData.deleteGame(SelectActivity.this, mLastMahjongg.getId())) {
+                                        mAllGames.remove(mLastMahjongg);
+                                        ((ListView) findViewById(R.id.AllGamesList)).invalidateViews();
+                                        if (mFavorites.remove(mLastMahjongg))
+                                            ((ListView) findViewById(R.id.FavoritesList)).invalidateViews();
+                                    }
+                                }
+                            });
+                    break;
 
-			case Command.PUBLISH_USER_GAME:
-				// TODO
-				break;
+                case Command.PUBLISH_USER_GAME:
+                    // TODO
+                    break;
 
-			case Command.USER_GAME_INFO:
-				mLastMahjongg.showInfo(this);
-				break;
-			}
-		}
-	}
+                case Command.USER_GAME_INFO:
+                    mLastMahjongg.showInfo(this);
+                    break;
+            }
+        }
+    }
 
-	//--------------------------------------------------------------------------
-	private void removeFromFavorites(final MahjonggData game) {
-		String message = getString(R.string.remove_from_favorites, game.getName());
-		Utils.Question(this, message, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				for (MahjonggData data : mFavorites)
-					if (data.getId() == game.getId()) {
-						mFavorites.remove(data);
-						Collections.sort(mFavorites);
-						storeFavoritesList();
-						((ListView)findViewById(R.id.FavoritesList)).invalidateViews();
-						return;
-					}
-			}
-		});
-	}
+    //--------------------------------------------------------------------------
+    private void removeFromFavorites(final MahjonggData game) {
+        String message = getString(R.string.remove_from_favorites, game.getName());
+        Utils.Question(this, message, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                for (MahjonggData data : mFavorites)
+                    if (data.getId() == game.getId()) {
+                        mFavorites.remove(data);
+                        Collections.sort(mFavorites);
+                        storeFavoritesList();
+                        ((ListView) findViewById(R.id.FavoritesList)).invalidateViews();
+                        return;
+                    }
+            }
+        });
+    }
 
-	//--------------------------------------------------------------------------
-	private void addToFavorites(final MahjonggData game) {
-		for (MahjonggData data : mFavorites)
-			if (data.getId() == game.getId()) {
-				String message = getString(R.string.already_in_favorites, game.getName());
-				Utils.Note(this, message);
-				return;
-			}
+    //--------------------------------------------------------------------------
+    private void addToFavorites(final MahjonggData game) {
+        for (MahjonggData data : mFavorites)
+            if (data.getId() == game.getId()) {
+                String message = getString(R.string.already_in_favorites, game.getName());
+                Utils.Note(this, message);
+                return;
+            }
 
-		mFavorites.add(game);
-		Collections.sort(mFavorites);
-		storeFavoritesList();
-		((ListView)findViewById(R.id.FavoritesList)).invalidateViews();
+        mFavorites.add(game);
+        Collections.sort(mFavorites);
+        storeFavoritesList();
+        ((ListView) findViewById(R.id.FavoritesList)).invalidateViews();
 
-		String message = getString(R.string.added_to_favorites, game.getName());
-		Utils.Note(this, message);
-	}
+        String message = getString(R.string.added_to_favorites, game.getName());
+        Utils.Note(this, message);
+    }
 
-	//--------------------------------------------------------------------------
-	private void storeFavoritesList() {
-		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		SharedPreferences.Editor editor = prefs.edit();
+    //--------------------------------------------------------------------------
+    private void storeFavoritesList() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = prefs.edit();
 
-		StringBuilder builder = new StringBuilder();
-		for (MahjonggData data : mFavorites) {
-			builder.append(data.getId());
-			builder.append(FAVORITE_SEPARATOR);
-		}
+        StringBuilder builder = new StringBuilder();
+        for (MahjonggData data : mFavorites) {
+            builder.append(data.getId());
+            builder.append(FAVORITE_SEPARATOR);
+        }
 
-		editor.putString(FAVORITES_KEY, builder.toString());
-		editor.commit();
-	}
+        editor.putString(FAVORITES_KEY, builder.toString());
+        editor.commit();
+    }
 
-	//--------------------------------------------------------------------------
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		Utils.createMenu(this, menu, true);
-		return true;
-	}
+    //--------------------------------------------------------------------------
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        Utils.createMenu(this, menu, true);
+        return true;
+    }
 
-	//--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
-	@Override
-	public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-		switch (item.getItemId()) {
-			case Command.ABOUT:
-				Utils.showAbout(this);
-				return true;
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case Command.ABOUT:
+                Utils.showAbout(this);
+                return true;
 
-			case Command.BACKGROUND:
-				registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-					_onActivityResult(Command.BACKGROUND_ACTIVITY, result);
-				}).launch(new Intent(this, BackgroundActivity.class));
-				return true;
+            case Command.BACKGROUND:
+                backgroundResult.launch(new Intent(this, BackgroundActivity.class));
+                return true;
 
-			case Command.SETTINGS:
-				registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-					_onActivityResult(Command.SETTINGS_ACTIVITY, result);
-				}).launch(new Intent(this, SettingsActivity.class));
-				return true;
+            case Command.SETTINGS:
+                settingsResult.launch(new Intent(this, SettingsActivity.class));
+                return true;
 
-			case Command.BUILDER:
-				startBuilder(-1);
-				return true;
-		}
+            case Command.BUILDER:
+                startBuilder(-1);
+                return true;
+        }
 
-		return super.onOptionsItemSelected(item);
-	}
+        return super.onOptionsItemSelected(item);
+    }
 
-	//--------------------------------------------------------------------------
-	private void startBuilder(int edit_id) {
-		Intent intent = new Intent(this, BuilderActivity.class);
-		intent.putExtra(BaseActivity.GAME_ID_KEY, edit_id);
-		registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-			_onActivityResult(Command.BUILDER_ACTIVITY, result);
-		}).launch(intent);
-	}
+    //--------------------------------------------------------------------------
+    private void startBuilder(int edit_id) {
+        Intent intent = new Intent(this, BuilderActivity.class);
+        intent.putExtra(BaseActivity.GAME_ID_KEY, edit_id);
+        builderResult.launch(intent);
+    }
 
-	private void _onActivityResult(int requestCode, ActivityResult result) {
-		var resultCode = result.getResultCode();
-		switch (requestCode) {
-		case Command.PLAY_ACTIVITY:
-			if (resultCode == Command.BUILDER) {
-				startBuilder(-1);
-			}
-			break;
+    private final ActivityResultLauncher<Intent> playResult = registerForActivityResult(new StartActivityForResult(), result -> {
+        _onActivityResult(Command.PLAY_ACTIVITY, result);
+    });
+    private final ActivityResultLauncher<Intent> backgroundResult = registerForActivityResult(new StartActivityForResult(), result -> {
+        _onActivityResult(Command.BACKGROUND_ACTIVITY, result);
+    });
 
-		case Command.BACKGROUND_ACTIVITY:
-			break;
+    private final ActivityResultLauncher<Intent> settingsResult = registerForActivityResult(new StartActivityForResult(), result -> {
+        _onActivityResult(Command.SETTINGS_ACTIVITY, result);
+    });
 
-		case Command.SETTINGS_ACTIVITY:
-			Utils.setOrientation(this);
-			break;
+    private final ActivityResultLauncher<Intent> builderResult = registerForActivityResult(new StartActivityForResult(), result -> {
+        _onActivityResult(Command.BUILDER_ACTIVITY, result);
+    });
 
-		case Command.BUILDER_ACTIVITY:
-			if (resultCode >= 0) {
-				boolean favorite = false;
+    private void _onActivityResult(int requestCode, ActivityResult result) {
+        var resultCode = result.getResultCode();
+        switch (requestCode) {
+            case Command.PLAY_ACTIVITY:
+                if (resultCode == Command.BUILDER) {
+                    startBuilder(-1);
+                }
+                break;
 
-				for (MahjonggData game : mAllGames)
-					if (game.getId() == resultCode) {
-						mAllGames.remove(game);
-						if (mFavorites.indexOf(game) >= 0) {
-							mFavorites.remove(game);
-							favorite = true;
-						}
-						break;
-					}
+            case Command.BACKGROUND_ACTIVITY:
+                break;
 
-				try {
-					MahjonggData game = new MahjonggData(this, resultCode);
-					game.createPreview(mPreviewWidth, mPreviewHeight);
+            case Command.SETTINGS_ACTIVITY:
+                Utils.setOrientation(this);
+                break;
 
-					mAllGames.add(game);
-					Collections.sort(mAllGames);
-					((ListView)findViewById(R.id.AllGamesList)).invalidateViews();
+            case Command.BUILDER_ACTIVITY:
+                if (resultCode >= 0) {
+                    boolean favorite = false;
 
-					if (favorite) {
-						mFavorites.add(game);
-						Collections.sort(mFavorites);
-						((ListView)findViewById(R.id.FavoritesList)).invalidateViews();
-					}
+                    for (MahjonggData game : mAllGames)
+                        if (game.getId() == resultCode) {
+                            mAllGames.remove(game);
+                            if (mFavorites.indexOf(game) >= 0) {
+                                mFavorites.remove(game);
+                                favorite = true;
+                            }
+                            break;
+                        }
 
-				} catch (LoadExeption e) {
-					e.printStackTrace();
-				}
-			}
-			break;
-		}
-	}
+                    try {
+                        MahjonggData game = new MahjonggData(this, resultCode);
+                        game.createPreview(mPreviewWidth, mPreviewHeight);
+
+                        mAllGames.add(game);
+                        Collections.sort(mAllGames);
+                        ((ListView) findViewById(R.id.AllGamesList)).invalidateViews();
+
+                        if (favorite) {
+                            mFavorites.add(game);
+                            Collections.sort(mFavorites);
+                            ((ListView) findViewById(R.id.FavoritesList)).invalidateViews();
+                        }
+
+                    } catch (LoadExeption e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+        }
+    }
 }
